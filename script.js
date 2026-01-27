@@ -103,11 +103,20 @@ function render() {
   // Player hand
   playerHand.forEach((card, index) => {
     const div = document.createElement("div");
-    let classes = `card ${card.colour}`;
-    // BOTH wild and wild4 get the quarter look
-    if (card.value === "wild4" || card.value === "wild") {
+
+    // Base class
+    let classes = "card";
+
+    // Only add colour class if not black (wilds)
+    if (card.colour !== "black") {
+      classes += ` ${card.colour}`;
+    }
+
+    // Wild & +4 get quartered look
+    if (card.value === "wild" || card.value === "wild4") {
       classes += " wild4-card";
     }
+
     div.className = classes;
     div.textContent = displayValue(card.value);
     div.onclick = () => playPlayerCard(index);
@@ -123,10 +132,15 @@ function render() {
 
   // Discard pile
   const top = discardPile[discardPile.length - 1];
-  let discardClasses = `card ${top.colour}`;
-  if (top.value === "wild4" || top.value === "wild") {
+  let discardClasses = "card";
+
+  if (top.colour !== "black") {
+    discardClasses += ` ${top.colour}`;
+  }
+  if (top.value === "wild" || top.value === "wild4") {
     discardClasses += " wild4-card";
   }
+
   discardDiv.className = discardClasses;
   discardDiv.textContent = displayValue(top.value);
 
@@ -312,7 +326,6 @@ function reshuffle() {
 // In 2-player: Skip & Reverse = extra turn for same player
 function handleEndOfPlay(card) {
   const extraTurn = card.value === "skip" || card.value === "reverse";
-
   nextPlayer(extraTurn);
 }
 
