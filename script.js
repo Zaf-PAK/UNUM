@@ -5,29 +5,34 @@ let discardPile = [];
 let playerHand = [];
 let aiHand = [];
 let currentColour = null;
-let playerTurn = true;
+let currentPlayer = "player"; // "player" or "ai"
+let wildCallback = null;
 
-const playerHandDiv = document.getElementById("player-hand");
-const aiHandDiv = document.getElementById("ai-hand");
-const discardDiv = document.getElementById("discard");
-const deckDiv = document.getElementById("deck");
-const messageDiv = document.getElementById("message");
+const playerHandDiv   = document.getElementById("player-hand");
+const aiHandDiv       = document.getElementById("ai-hand");
+const discardDiv      = document.getElementById("discard");
+const deckDiv         = document.getElementById("deck");
+const messageDiv      = document.getElementById("message");
+const currentColourEl = document.getElementById("current-colour");
+const colourPicker    = document.getElementById("colour-picker");
 
 /* ------------------ DECK ------------------ */
 function createDeck() {
   deck = [];
 
   for (let colour of colours) {
+    // Number cards 0–9
     for (let i = 0; i <= 9; i++) {
       deck.push({ colour, value: i });
     }
-
+    // Action cards x2: skip, reverse, draw2
     ["skip", "reverse", "draw2"].forEach(v => {
       deck.push({ colour, value: v });
       deck.push({ colour, value: v });
     });
   }
 
+  // Wild cards
   for (let i = 0; i < 4; i++) {
     deck.push({ colour: "black", value: "wild" });
     deck.push({ colour: "black", value: "wild4" });
@@ -40,6 +45,10 @@ function shuffle() {
 
 /* ------------------ SETUP ------------------ */
 function dealCards() {
+  playerHand = [];
+  aiHand = [];
+  discardPile = [];
+
   for (let i = 0; i < 7; i++) {
     playerHand.push(deck.pop());
     aiHand.push(deck.pop());
@@ -51,14 +60,14 @@ function startGame() {
   shuffle();
   dealCards();
 
-  const firstCard = deck.pop();
-  discardPile.push(firstCard);
+  // Flip first card
+  let first = deck.pop();
+  discardPile.push(first);
+  currentColour = first.colour === "black"
+    ? colours[Math.floor(Math.random() * colours.length)]
+    : first.colour;
 
-  currentColour =
-    firstCard.colour === "black"
-      ? colours[Math.floor(Math.random() * colours.length)]
-      : firstCard.colour;
-
+  currentPlayer = "player";
   render();
 }
 
@@ -67,6 +76,7 @@ function render() {
   playerHandDiv.innerHTML = "";
   aiHandDiv.innerHTML = "";
 
+  // Player hand
   playerHand.forEach((card, index) => {
     const div = document.createElement("div");
     div.className = `card ${card.colour}`;
@@ -75,102 +85,194 @@ function render() {
     playerHandDiv.appendChild(div);
   });
 
+  // AI hand (face down)
   aiHand.forEach(() => {
     const div = document.createElement("div");
     div.className = "card back";
+    div.textContent = "";
     aiHandDiv.appendChild(div);
   });
 
-  const topCard = discardPile[discardPile.length - 1];
+  // Discard pile
+  const top = discardPile[discardPile.length - 1];
   discardDiv.className = `card ${currentColour}`;
-  discardDiv.textContent = topCard.value;
+  discardDiv.textContent = top.value;
 
-  messageDiv.textContent = playerTurn
-    ? "Your turn"
-    : "AI is thinking...";
+  currentColourEl.textContent = `Current colour: ${currentColour.toUpperCase()}`;
+
+  messageDiv.textContent =
+    currentPlayer === "player" ? "Your turn" : "AI is thinking...";
 }
 
 /* ------------------ RULES ------------------ */
 function canPlay(card) {
-  const topCard = discardPile[discardPile.length - 1];
+  const top = discardPile[discardPile.length - 1];
   return (
     card.colour === currentColour ||
-    card.value === topCard.value ||
+    card.value === top.value ||
     card.colour === "black"
   );
 }
 
-/* ------------------ PLAYER ------------------ */
+/* ------------------ PLAYER TURN ------------------ */
 function playPlayerCard(index) {
-  if (!playerTurn) return;
+  if (currentPlayer !== "player") return;
 
   const card = playerHand[index];
   if (!canPlay(card)) return;
 
   playerHand.splice(index, 1);
-  playCard(card);
 
-  playerTurn = false;
-  render();
-  setTimeout(aiTurn, 1000);
-}
-
-/* ------------------ AI ------------------ */
-function aiTurn() {
-  const playableIndex = aiHand.findIndex(canPlay);
-
-  if (playableIndex !== -1) {
-    const card = aiHand.splice(playableIndex, 1)[0];
-    playCard(card);
+  if (card.colour === "black") {
+    // Wild – let player choose colour
+    showColourPicker(colour => {
+      applyCardPlay(card, "player", colour);
+      handleEndOfPlay(card);
+    });
   } else {
-    aiHand.push(deck.pop());
+    applyCardPlay(card, "player", card.colour);
+    handleEndOfPlay(card);
   }
 
-  playerTurn = true;
+  render();
+}
+
+/* ------------------ AI TURN ------------------ */
+function aiTurn() {
+  if (currentPlayer !== "ai") return;
+
+  // Find first playable card
+  const playableIndex = aiHand.findIndex(canPlay);
+
+  if (playableIndex === -1) {
+    // No card to play: draw one and end turn
+    drawCards(aiHand, 1);
+    currentPlayer = "player";
+    render();
+    return;
+  }
+
+  const card = aiHand.splice(playableIndex, 1)[0];
+
+  if (card.colour === "black") {
+    const bestColour = chooseBestColour(aiHand) ||
+      colours[Math.floor(Math.random() * colours.length)];
+    applyCardPlay(card, "ai", bestColour);
+  } else {
+    applyCardPlay(card, "ai", card.colour);
+  }
+
+  handleEndOfPlay(card);
   render();
 }
 
 /* ------------------ CARD EFFECTS ------------------ */
-function playCard(card) {
+function applyCardPlay(card, player, chosenColour) {
   discardPile.push(card);
 
-  if (card.colour === "black") {
-    currentColour = colours[Math.floor(Math.random() * colours.length)];
-  } else {
-    currentColour = card.colour;
-  }
+  currentColour = card.colour === "black"
+    ? chosenColour
+    : card.colour;
+
+  const opponentHand = player === "player" ? aiHand : playerHand;
 
   if (card.value === "draw2") {
-    drawCards(playerTurn ? aiHand : playerHand, 2);
+    // Opponent draws 2 and loses their turn (as normal)
+    drawCards(opponentHand, 2);
   }
 
   if (card.value === "wild4") {
-    drawCards(playerTurn ? aiHand : playerHand, 4);
+    // Opponent draws 4 and loses their turn
+    drawCards(opponentHand, 4);
   }
 }
 
 function drawCards(hand, count) {
   for (let i = 0; i < count; i++) {
     if (deck.length === 0) reshuffle();
+    if (deck.length === 0) return; // no cards left at all
     hand.push(deck.pop());
   }
 }
 
 function reshuffle() {
+  // Move all but top discard back into deck
   const top = discardPile.pop();
   deck = discardPile;
   discardPile = [top];
   shuffle();
 }
 
-/* ------------------ DECK CLICK ------------------ */
-deckDiv.onclick = () => {
-  if (!playerTurn) return;
+/* ------------------ TURN HANDLING ------------------ */
+// In 2-player: Skip & Reverse = extra turn for same player
+function handleEndOfPlay(card) {
+  const extraTurn =
+    card.value === "skip" || card.value === "reverse";
 
-  drawCards(playerHand, 1);
-  playerTurn = false;
+  nextPlayer(extraTurn);
+}
+
+function nextPlayer(extraTurn) {
+  if (!extraTurn) {
+    currentPlayer = currentPlayer === "player" ? "ai" : "player";
+  }
   render();
-  setTimeout(aiTurn, 1000);
+  if (currentPlayer === "ai") {
+    setTimeout(aiTurn, 800);
+  }
+}
+
+/* ------------------ WILD COLOUR PICKER ------------------ */
+function showColourPicker(onChoice) {
+  wildCallback = onChoice;
+  colourPicker.style.display = "flex";
+}
+
+function chooseColour(colour) {
+  colourPicker.style.display = "none";
+  if (wildCallback) {
+    wildCallback(colour);
+    wildCallback = null;
+  }
+}
+
+// Attach listeners to colour buttons
+document.querySelectorAll(".colour-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const colour = btn.getAttribute("data-colour");
+    chooseColour(colour);
+  });
+});
+
+/* ------------------ AI HELPERS ------------------ */
+function chooseBestColour(hand) {
+  const counts = { red: 0, yellow: 0, green: 0, blue: 0 };
+  hand.forEach(card => {
+    if (counts.hasOwnProperty(card.colour)) {
+      counts[card.colour]++;
+    }
+  });
+
+  let bestColour = null;
+  let bestCount = -1;
+  for (const c of colours) {
+    if (counts[c] > bestCount) {
+      bestCount = counts[c];
+      bestColour = c;
+    }
+  }
+  return bestCount > 0 ? bestColour : null;
+}
+
+/* ------------------ DECK CLICK ------------------ */
+// Once you pick up, it's the other person's turn
+deckDiv.onclick = () => {
+  if (currentPlayer !== "player") return;
+  drawCards(playerHand, 1);
+  currentPlayer = "ai";
+  render();
+  setTimeout(aiTurn, 800);
 };
 
+/* ------------------ START ------------------ */
 startGame();
