@@ -74,11 +74,23 @@ h1 {
   color: #fff;
 }
 
+/* Normal colour cards */
 .red    { background: radial-gradient(circle at 30% 20%, #ffb3b3, #e74c3c); }
 .yellow { background: radial-gradient(circle at 30% 20%, #fff2a3, #f1c40f); color:#000; }
 .green  { background: radial-gradient(circle at 30% 20%, #a8f5c0, #2ecc71); }
 .blue   { background: radial-gradient(circle at 30% 20%, #a8d6ff, #3498db); }
 .black  { background: radial-gradient(circle at 30% 20%, #666, #000); }
+
+/* Multi-colour +4 card (class added in JS) */
+.wild4-card {
+  background: conic-gradient(
+    #e74c3c 0 25%,
+    #f1c40f 25% 50%,
+    #2ecc71 50% 75%,
+    #3498db 75% 100%
+  );
+  color: #fff;
+}
 
 .centre {
   display: flex;
