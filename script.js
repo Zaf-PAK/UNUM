@@ -104,7 +104,7 @@ function render() {
   playerHand.forEach((card, index) => {
     const div = document.createElement("div");
     let classes = `card ${card.colour}`;
-    // 🔷 Give BOTH wild and wild4 the quartered look
+    // BOTH wild and wild4 get the quarter look
     if (card.value === "wild4" || card.value === "wild") {
       classes += " wild4-card";
     }
