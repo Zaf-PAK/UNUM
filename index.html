@@ -16,8 +16,9 @@
   </div>
 
   <div class="centre">
-    <div id="deck" class="card back">Deck</div>
+    <div id="deck" class="card back">UNO</div>
     <div id="discard" class="card">?</div>
+    <div id="current-colour"></div>
   </div>
 
   <div class="hand">
@@ -27,6 +28,17 @@
 </div>
 
 <div id="message"></div>
+
+<!-- Wild colour picker -->
+<div id="colour-picker" class="picker">
+  <p>Choose a colour:</p>
+  <div class="picker-buttons">
+    <button class="colour-btn red" data-colour="red">Red</button>
+    <button class="colour-btn yellow" data-colour="yellow">Yellow</button>
+    <button class="colour-btn green" data-colour="green">Green</button>
+    <button class="colour-btn blue" data-colour="blue">Blue</button>
+  </div>
+</div>
 
 <script src="script.js"></script>
 </body>
