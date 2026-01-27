@@ -1,18 +1,22 @@
 body {
   font-family: Arial, sans-serif;
-  background: #0a7f3f;
+  background: #0b5d32;
   color: white;
   text-align: center;
+  margin: 0;
+  padding: 0;
 }
 
 h1 {
-  margin-top: 10px;
+  margin-top: 12px;
+  letter-spacing: 4px;
 }
 
 #game {
   display: flex;
   justify-content: space-around;
   margin-top: 20px;
+  padding: 0 10px;
 }
 
 .hand {
@@ -26,9 +30,10 @@ h1 {
 }
 
 .card {
-  width: 70px;
-  height: 100px;
-  border-radius: 12px;
+  position: relative;
+  width: 80px;
+  height: 120px;
+  border-radius: 14px;
   margin: 6px;
   background: white;
   color: black;
@@ -36,30 +41,91 @@ h1 {
   align-items: center;
   justify-content: center;
   font-weight: bold;
+  font-size: 26px;
   cursor: pointer;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+  box-shadow: 0 6px 10px rgba(0,0,0,0.4);
+  border: 3px solid #ffffff;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
 }
 
-.back {
-  background: #222;
-  color: white;
+.card::before {
+  content: "";
+  position: absolute;
+  inset: 8px;
+  border-radius: 60% / 40%;
+  border: 2px solid rgba(255,255,255,0.8);
+  opacity: 0.7;
 }
 
-.red { background: #e74c3c; color: white; }
-.yellow { background: #f1c40f; }
-.green { background: #2ecc71; color: white; }
-.blue { background: #3498db; color: white; }
-.black { background: black; color: white; }
+.card.back {
+  background: radial-gradient(circle at 30% 20%, #ffffff 0%, #444 40%, #000 80%);
+  color: #fff;
+  font-size: 20px;
+}
+
+.red    { background: radial-gradient(circle at 30% 20%, #ffb3b3, #e74c3c); }
+.yellow { background: radial-gradient(circle at 30% 20%, #fff2a3, #f1c40f); color:#000; }
+.green  { background: radial-gradient(circle at 30% 20%, #a8f5c0, #2ecc71); }
+.blue   { background: radial-gradient(circle at 30% 20%, #a8d6ff, #3498db); }
+.black  { background: radial-gradient(circle at 30% 20%, #666, #000); }
 
 .centre {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 15px;
+  gap: 12px;
+}
+
+#current-colour {
+  margin-top: 4px;
+  font-size: 14px;
+  font-weight: bold;
 }
 
 #message {
-  margin-top: 15px;
+  margin-top: 18px;
   font-size: 18px;
   font-weight: bold;
 }
+
+/* Wild colour picker overlay */
+#colour-picker {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0,0,0,0.9);
+  padding: 20px 24px;
+  border-radius: 14px;
+  display: none; /* shown via JS */
+  flex-direction: column;
+  gap: 10px;
+  z-index: 10;
+  box-shadow: 0 8px 16px rgba(0,0,0,0.6);
+}
+
+#colour-picker p {
+  margin: 0 0 8px;
+  font-size: 18px;
+}
+
+.picker-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.colour-btn {
+  border: none;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 14px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+}
+
+.colour-btn.red    { background: #e74c3c; color: #fff; }
+.colour-btn.yellow { background: #f1c40f; color: #000; }
+.colour-btn.green  { background: #2ecc71; color: #fff; }
+.colour-btn.blue   { background: #3498db; color: #fff; }
