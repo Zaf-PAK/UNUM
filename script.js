@@ -217,7 +217,7 @@ function aiTurn() {
       checkForWinner();
       render();
     } else {
-      // No stack available: AI must draw full penalty and end turn
+      // ❗ Forced pick-up for AI: draw full amount, then it's YOUR turn
       drawCards(aiHand, pendingDraw);
       pendingDraw = 0;
       pendingDrawActive = false;
@@ -232,7 +232,7 @@ function aiTurn() {
   const playableIndex = aiHand.findIndex(canPlay);
 
   if (playableIndex === -1) {
-    // No card to play: draw 1 and end turn
+    // No card to play: draw 1 and pass turn
     drawCards(aiHand, 1);
     currentPlayer = "player";
     checkForWinner();
@@ -263,8 +263,6 @@ function applyCardPlay(card, player, chosenColour) {
     ? chosenColour
     : card.colour;
 
-  const opponentHand = player === "player" ? aiHand : playerHand;
-
   // Stacking logic: increase pending draw for Draw2 / Wild4
   if (card.value === "draw2") {
     pendingDraw += 2;
@@ -275,9 +273,6 @@ function applyCardPlay(card, player, chosenColour) {
     pendingDraw += 4;
     pendingDrawActive = true;
   }
-
-  // Note: cards are not drawn immediately here – they are drawn
-  // by the next player when they fail to stack.
 }
 
 function drawCards(hand, count) {
@@ -299,11 +294,8 @@ function reshuffle() {
 /* ------------------ TURN HANDLING ------------------ */
 // In 2-player: Skip & Reverse = extra turn for same player
 function handleEndOfPlay(card) {
-  // Skip / Reverse => extra turn
   const extraTurn = card.value === "skip" || card.value === "reverse";
 
-  // Draw2 / Wild4 => NO extra turn flag here;
-  // stacking / draw penalty is handled separately by pendingDrawActive
   nextPlayer(extraTurn);
 }
 
@@ -360,22 +352,22 @@ function chooseBestColour(hand) {
 }
 
 /* ------------------ DECK CLICK ------------------ */
-// Once you pick up, it's the other person's turn
+// Player draw logic:
+// - If under penalty: draw ALL pending cards, then AI's turn
+// - Otherwise: draw ONE card, then AI's turn
 deckDiv.onclick = () => {
   if (gameOver) return;
   if (currentPlayer !== "player") return;
 
   if (pendingDrawActive) {
-    // Under penalty: draw full amount, then reset and pass turn
     drawCards(playerHand, pendingDraw);
     pendingDraw = 0;
     pendingDrawActive = false;
   } else {
-    // Normal draw: 1 card, then pass turn
     drawCards(playerHand, 1);
   }
 
-  currentPlayer = "ai";
+  currentPlayer = "ai";  // always the other person's turn after pick-up
   checkForWinner();
   render();
   setTimeout(aiTurn, 800);
