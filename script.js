@@ -88,6 +88,14 @@ function startGame() {
 }
 
 /* ------------------ RENDER ------------------ */
+
+// helper: how value is shown on the card face
+function displayValue(value) {
+  if (value === "draw2") return "+2";
+  if (value === "wild4") return "+4";
+  return value;
+}
+
 function render() {
   playerHandDiv.innerHTML = "";
   aiHandDiv.innerHTML = "";
@@ -95,8 +103,12 @@ function render() {
   // Player hand
   playerHand.forEach((card, index) => {
     const div = document.createElement("div");
-    div.className = `card ${card.colour}`;
-    div.textContent = card.value;
+    let classes = `card ${card.colour}`;
+    if (card.value === "wild4") {
+      classes += " wild4-card";
+    }
+    div.className = classes;
+    div.textContent = displayValue(card.value);
     div.onclick = () => playPlayerCard(index);
     playerHandDiv.appendChild(div);
   });
@@ -110,8 +122,12 @@ function render() {
 
   // Discard pile
   const top = discardPile[discardPile.length - 1];
-  discardDiv.className = `card ${currentColour}`;
-  discardDiv.textContent = top.value;
+  let discardClasses = `card ${top.colour}`;
+  if (top.value === "wild4") {
+    discardClasses += " wild4-card";
+  }
+  discardDiv.className = discardClasses;
+  discardDiv.textContent = displayValue(top.value);
 
   currentColourEl.textContent = `Current colour: ${currentColour.toUpperCase()}` +
     (pendingDrawActive ? `  |  Pending draw: ${pendingDraw}` : "");
@@ -135,7 +151,7 @@ function render() {
 
   if (!gameOver) {
     if (pendingDrawActive && currentPlayer === "player") {
-      messageDiv.textContent = `Your turn – play DRAW 2 / WILD4 or draw ${pendingDraw}`;
+      messageDiv.textContent = `Your turn – play +2 / +4 or draw ${pendingDraw}`;
     } else if (pendingDrawActive && currentPlayer === "ai") {
       messageDiv.textContent = `AI turn – deciding whether to stack or draw ${pendingDraw}`;
     } else {
@@ -217,7 +233,7 @@ function aiTurn() {
       checkForWinner();
       render();
     } else {
-      // ❗ Forced pick-up for AI: draw full amount, then it's YOUR turn
+      // Forced pick-up for AI: draw full amount, then it's YOUR turn
       drawCards(aiHand, pendingDraw);
       pendingDraw = 0;
       pendingDrawActive = false;
