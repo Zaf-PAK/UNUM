@@ -7,6 +7,7 @@ let aiHand = [];
 let currentColour = null;
 let currentPlayer = "player"; // "player" or "ai"
 let wildCallback = null;
+let gameOver = false;
 
 const playerHandDiv   = document.getElementById("player-hand");
 const aiHandDiv       = document.getElementById("ai-hand");
@@ -15,6 +16,12 @@ const deckDiv         = document.getElementById("deck");
 const messageDiv      = document.getElementById("message");
 const currentColourEl = document.getElementById("current-colour");
 const colourPicker    = document.getElementById("colour-picker");
+const playerUnoEl     = document.getElementById("player-uno");
+const aiUnoEl         = document.getElementById("ai-uno");
+const winOverlay      = document.getElementById("win-overlay");
+const winMessageEl    = document.getElementById("win-message");
+const restartBtn      = document.getElementById("restart-btn");
+const confettiContainer = document.getElementById("confetti-container");
 
 /* ------------------ DECK ------------------ */
 function createDeck() {
@@ -56,6 +63,8 @@ function dealCards() {
 }
 
 function startGame() {
+  gameOver = false;
+  hideWinOverlay();
   createDeck();
   shuffle();
   dealCards();
@@ -89,7 +98,6 @@ function render() {
   aiHand.forEach(() => {
     const div = document.createElement("div");
     div.className = "card back";
-    div.textContent = "";
     aiHandDiv.appendChild(div);
   });
 
@@ -100,8 +108,27 @@ function render() {
 
   currentColourEl.textContent = `Current colour: ${currentColour.toUpperCase()}`;
 
-  messageDiv.textContent =
-    currentPlayer === "player" ? "Your turn" : "AI is thinking...";
+  // UNUS badges
+  if (playerHand.length === 1) {
+    playerUnoEl.textContent = "UNUS!";
+    playerUnoEl.classList.add("active");
+  } else {
+    playerUnoEl.textContent = "";
+    playerUnoEl.classList.remove("active");
+  }
+
+  if (aiHand.length === 1) {
+    aiUnoEl.textContent = "UNUS!";
+    aiUnoEl.classList.add("active");
+  } else {
+    aiUnoEl.textContent = "";
+    aiUnoEl.classList.remove("active");
+  }
+
+  if (!gameOver) {
+    messageDiv.textContent =
+      currentPlayer === "player" ? "Your turn" : "AI is thinking...";
+  }
 }
 
 /* ------------------ RULES ------------------ */
@@ -116,6 +143,7 @@ function canPlay(card) {
 
 /* ------------------ PLAYER TURN ------------------ */
 function playPlayerCard(index) {
+  if (gameOver) return;
   if (currentPlayer !== "player") return;
 
   const card = playerHand[index];
@@ -134,11 +162,13 @@ function playPlayerCard(index) {
     handleEndOfPlay(card);
   }
 
+  checkForWinner();
   render();
 }
 
 /* ------------------ AI TURN ------------------ */
 function aiTurn() {
+  if (gameOver) return;
   if (currentPlayer !== "ai") return;
 
   // Find first playable card
@@ -148,6 +178,7 @@ function aiTurn() {
     // No card to play: draw one and end turn
     drawCards(aiHand, 1);
     currentPlayer = "player";
+    checkForWinner();
     render();
     return;
   }
@@ -163,6 +194,7 @@ function aiTurn() {
   }
 
   handleEndOfPlay(card);
+  checkForWinner();
   render();
 }
 
@@ -177,12 +209,10 @@ function applyCardPlay(card, player, chosenColour) {
   const opponentHand = player === "player" ? aiHand : playerHand;
 
   if (card.value === "draw2") {
-    // Opponent draws 2 and loses their turn (as normal)
     drawCards(opponentHand, 2);
   }
 
   if (card.value === "wild4") {
-    // Opponent draws 4 and loses their turn
     drawCards(opponentHand, 4);
   }
 }
@@ -217,7 +247,7 @@ function nextPlayer(extraTurn) {
     currentPlayer = currentPlayer === "player" ? "ai" : "player";
   }
   render();
-  if (currentPlayer === "ai") {
+  if (!gameOver && currentPlayer === "ai") {
     setTimeout(aiTurn, 800);
   }
 }
@@ -267,12 +297,70 @@ function chooseBestColour(hand) {
 /* ------------------ DECK CLICK ------------------ */
 // Once you pick up, it's the other person's turn
 deckDiv.onclick = () => {
+  if (gameOver) return;
   if (currentPlayer !== "player") return;
   drawCards(playerHand, 1);
   currentPlayer = "ai";
+  checkForWinner();
   render();
   setTimeout(aiTurn, 800);
 };
+
+/* ------------------ WIN / LOSE HANDLING ------------------ */
+function checkForWinner() {
+  if (gameOver) return;
+
+  if (playerHand.length === 0) {
+    endGame("player");
+  } else if (aiHand.length === 0) {
+    endGame("ai");
+  }
+}
+
+function endGame(winner) {
+  gameOver = true;
+  if (winner === "player") {
+    messageDiv.textContent = "You win!";
+    winMessageEl.textContent = "You Win!";
+  } else {
+    messageDiv.textContent = "AI wins!";
+    winMessageEl.textContent = "You Lose!";
+  }
+  showWinOverlay();
+  launchConfetti();
+}
+
+/* ------------------ OVERLAY & CONFETTI ------------------ */
+function showWinOverlay() {
+  winOverlay.style.display = "flex";
+}
+
+function hideWinOverlay() {
+  winOverlay.style.display = "none";
+  confettiContainer.innerHTML = "";
+}
+
+function launchConfetti() {
+  confettiContainer.innerHTML = "";
+  const pieces = 100;
+  for (let i = 0; i < pieces; i++) {
+    const conf = document.createElement("div");
+    conf.className = "confetti";
+    conf.style.left = Math.random() * 100 + "%";
+    conf.style.animationDuration = (3 + Math.random() * 2) + "s";
+
+    const coloursConf = ["#e74c3c","#f1c40f","#2ecc71","#3498db","#9b59b6"];
+    conf.style.backgroundColor =
+      coloursConf[Math.floor(Math.random() * coloursConf.length)];
+
+    confettiContainer.appendChild(conf);
+  }
+}
+
+/* ------------------ RESTART BUTTON ------------------ */
+restartBtn.addEventListener("click", () => {
+  startGame();
+});
 
 /* ------------------ START ------------------ */
 startGame();
