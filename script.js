@@ -9,6 +9,10 @@ let currentPlayer = "player"; // "player" or "ai"
 let wildCallback = null;
 let gameOver = false;
 
+// stacking for Draw cards (Draw 2 and Wild +4)
+let pendingDraw = 0;        // total cards to draw
+let pendingDrawActive = false;
+
 const playerHandDiv   = document.getElementById("player-hand");
 const aiHandDiv       = document.getElementById("ai-hand");
 const discardDiv      = document.getElementById("discard");
@@ -22,6 +26,7 @@ const winOverlay      = document.getElementById("win-overlay");
 const winMessageEl    = document.getElementById("win-message");
 const restartBtn      = document.getElementById("restart-btn");
 const confettiContainer = document.getElementById("confetti-container");
+const trophyEl        = document.querySelector(".trophy");
 
 /* ------------------ DECK ------------------ */
 function createDeck() {
@@ -64,6 +69,8 @@ function dealCards() {
 
 function startGame() {
   gameOver = false;
+  pendingDraw = 0;
+  pendingDrawActive = false;
   hideWinOverlay();
   createDeck();
   shuffle();
@@ -106,7 +113,8 @@ function render() {
   discardDiv.className = `card ${currentColour}`;
   discardDiv.textContent = top.value;
 
-  currentColourEl.textContent = `Current colour: ${currentColour.toUpperCase()}`;
+  currentColourEl.textContent = `Current colour: ${currentColour.toUpperCase()}` +
+    (pendingDrawActive ? `  |  Pending draw: ${pendingDraw}` : "");
 
   // UNUS badges
   if (playerHand.length === 1) {
@@ -126,14 +134,26 @@ function render() {
   }
 
   if (!gameOver) {
-    messageDiv.textContent =
-      currentPlayer === "player" ? "Your turn" : "AI is thinking...";
+    if (pendingDrawActive && currentPlayer === "player") {
+      messageDiv.textContent = `Your turn – play DRAW 2 / WILD4 or draw ${pendingDraw}`;
+    } else if (pendingDrawActive && currentPlayer === "ai") {
+      messageDiv.textContent = `AI turn – deciding whether to stack or draw ${pendingDraw}`;
+    } else {
+      messageDiv.textContent =
+        currentPlayer === "player" ? "Your turn" : "AI is thinking...";
+    }
   }
 }
 
 /* ------------------ RULES ------------------ */
 function canPlay(card) {
   const top = discardPile[discardPile.length - 1];
+
+  // While under draw penalty, only Draw 2 or Wild4 can be stacked
+  if (pendingDrawActive) {
+    return card.value === "draw2" || card.value === "wild4";
+  }
+
   return (
     card.colour === currentColour ||
     card.value === top.value ||
@@ -147,6 +167,12 @@ function playPlayerCard(index) {
   if (currentPlayer !== "player") return;
 
   const card = playerHand[index];
+
+  // While under draw penalty, player can only stack with Draw2/Wild4
+  if (pendingDrawActive && card.value !== "draw2" && card.value !== "wild4") {
+    return;
+  }
+
   if (!canPlay(card)) return;
 
   playerHand.splice(index, 1);
@@ -156,14 +182,15 @@ function playPlayerCard(index) {
     showColourPicker(colour => {
       applyCardPlay(card, "player", colour);
       handleEndOfPlay(card);
+      checkForWinner();
+      render();
     });
   } else {
     applyCardPlay(card, "player", card.colour);
     handleEndOfPlay(card);
+    checkForWinner();
+    render();
   }
-
-  checkForWinner();
-  render();
 }
 
 /* ------------------ AI TURN ------------------ */
@@ -171,11 +198,41 @@ function aiTurn() {
   if (gameOver) return;
   if (currentPlayer !== "ai") return;
 
-  // Find first playable card
+  // If under draw penalty, AI tries to stack with Draw2/Wild4
+  if (pendingDrawActive) {
+    const idx = aiHand.findIndex(
+      c => c.value === "draw2" || c.value === "wild4"
+    );
+
+    if (idx !== -1) {
+      const card = aiHand.splice(idx, 1)[0];
+      if (card.colour === "black") {
+        const bestColour = chooseBestColour(aiHand) ||
+          colours[Math.floor(Math.random() * colours.length)];
+        applyCardPlay(card, "ai", bestColour);
+      } else {
+        applyCardPlay(card, "ai", card.colour);
+      }
+      handleEndOfPlay(card);
+      checkForWinner();
+      render();
+    } else {
+      // No stack available: AI must draw full penalty and end turn
+      drawCards(aiHand, pendingDraw);
+      pendingDraw = 0;
+      pendingDrawActive = false;
+      currentPlayer = "player";
+      checkForWinner();
+      render();
+    }
+    return;
+  }
+
+  // Normal AI turn (no pending draw)
   const playableIndex = aiHand.findIndex(canPlay);
 
   if (playableIndex === -1) {
-    // No card to play: draw one and end turn
+    // No card to play: draw 1 and end turn
     drawCards(aiHand, 1);
     currentPlayer = "player";
     checkForWinner();
@@ -208,13 +265,19 @@ function applyCardPlay(card, player, chosenColour) {
 
   const opponentHand = player === "player" ? aiHand : playerHand;
 
+  // Stacking logic: increase pending draw for Draw2 / Wild4
   if (card.value === "draw2") {
-    drawCards(opponentHand, 2);
+    pendingDraw += 2;
+    pendingDrawActive = true;
   }
 
   if (card.value === "wild4") {
-    drawCards(opponentHand, 4);
+    pendingDraw += 4;
+    pendingDrawActive = true;
   }
+
+  // Note: cards are not drawn immediately here – they are drawn
+  // by the next player when they fail to stack.
 }
 
 function drawCards(hand, count) {
@@ -236,9 +299,11 @@ function reshuffle() {
 /* ------------------ TURN HANDLING ------------------ */
 // In 2-player: Skip & Reverse = extra turn for same player
 function handleEndOfPlay(card) {
-  const extraTurn =
-    card.value === "skip" || card.value === "reverse";
+  // Skip / Reverse => extra turn
+  const extraTurn = card.value === "skip" || card.value === "reverse";
 
+  // Draw2 / Wild4 => NO extra turn flag here;
+  // stacking / draw penalty is handled separately by pendingDrawActive
   nextPlayer(extraTurn);
 }
 
@@ -299,7 +364,17 @@ function chooseBestColour(hand) {
 deckDiv.onclick = () => {
   if (gameOver) return;
   if (currentPlayer !== "player") return;
-  drawCards(playerHand, 1);
+
+  if (pendingDrawActive) {
+    // Under penalty: draw full amount, then reset and pass turn
+    drawCards(playerHand, pendingDraw);
+    pendingDraw = 0;
+    pendingDrawActive = false;
+  } else {
+    // Normal draw: 1 card, then pass turn
+    drawCards(playerHand, 1);
+  }
+
   currentPlayer = "ai";
   checkForWinner();
   render();
@@ -319,15 +394,20 @@ function checkForWinner() {
 
 function endGame(winner) {
   gameOver = true;
+
   if (winner === "player") {
     messageDiv.textContent = "You win!";
     winMessageEl.textContent = "You Win!";
+    trophyEl.style.display = "block";
+    showWinOverlay();
+    launchConfetti();
   } else {
     messageDiv.textContent = "AI wins!";
     winMessageEl.textContent = "You Lose!";
+    trophyEl.style.display = "none";
+    showWinOverlay();
+    // no confetti for AI win
   }
-  showWinOverlay();
-  launchConfetti();
 }
 
 /* ------------------ OVERLAY & CONFETTI ------------------ */
