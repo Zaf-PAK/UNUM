@@ -104,7 +104,8 @@ function render() {
   playerHand.forEach((card, index) => {
     const div = document.createElement("div");
     let classes = `card ${card.colour}`;
-    if (card.value === "wild4") {
+    // 🔷 Give BOTH wild and wild4 the quartered look
+    if (card.value === "wild4" || card.value === "wild") {
       classes += " wild4-card";
     }
     div.className = classes;
@@ -123,7 +124,7 @@ function render() {
   // Discard pile
   const top = discardPile[discardPile.length - 1];
   let discardClasses = `card ${top.colour}`;
-  if (top.value === "wild4") {
+  if (top.value === "wild4" || top.value === "wild") {
     discardClasses += " wild4-card";
   }
   discardDiv.className = discardClasses;
