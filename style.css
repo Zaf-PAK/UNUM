@@ -88,8 +88,8 @@ h1 {
     #f1c40f 25% 50%,
     #2ecc71 50% 75%,
     #3498db 75% 100%
-  ) !important;
-  color: #fff !important;
+  );
+  color: #fff;
 }
 
 .centre {
