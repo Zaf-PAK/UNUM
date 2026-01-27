@@ -57,10 +57,21 @@ h1 {
   opacity: 0.7;
 }
 
+/* Back of card (deck & AI cards) */
 .card.back {
   background: radial-gradient(circle at 30% 20%, #ffffff 0%, #444 40%, #000 80%);
   color: #fff;
   font-size: 20px;
+}
+
+/* Show UNUM on back cards */
+.card.back::after {
+  content: "UNUM";
+  position: absolute;
+  font-weight: bold;
+  font-size: 18px;
+  letter-spacing: 2px;
+  color: #fff;
 }
 
 .red    { background: radial-gradient(circle at 30% 20%, #ffb3b3, #e74c3c); }
