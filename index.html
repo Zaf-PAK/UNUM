@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>UNO – Player vs AI</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<h1>UNO</h1>
+
+<div id="game">
+  <div class="hand">
+    <h2>AI</h2>
+    <div id="ai-hand" class="cards"></div>
+  </div>
+
+  <div class="centre">
+    <div id="deck" class="card back">Deck</div>
+    <div id="discard" class="card">?</div>
+  </div>
+
+  <div class="hand">
+    <h2>You</h2>
+    <div id="player-hand" class="cards"></div>
+  </div>
+</div>
+
+<div id="message"></div>
+
+<script src="script.js"></script>
+</body>
+</html>
+body {
+  font-family: Arial, sans-serif;
+  background: #0a7f3f;
+  color: white;
+  text-align: center;
+}
+
+h1 {
+  margin-top: 10px;
+}
+
+#game {
+  display: flex;
+  justify-content: space-around;
+  margin-top: 20px;
+}
+
+.hand {
+  width: 40%;
+}
+
+.cards {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.card {
+  width: 70px;
+  height: 100px;
+  border-radius: 12px;
+  margin: 6px;
+  background: white;
+  color: black;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+}
+
+.back {
+  background: #222;
+  color: white;
+  cursor: pointer;
+}
+
+.red { background: #e74c3c; color: white; }
+.yellow { background: #f1c40f; }
+.green { background: #2ecc71; color: white; }
+.blue { background: #3498db; color: white; }
+.black { background: black; color: white; }
+
+.centre {
+  display: flex;
+  flex-direction: column;
+const colours = ["red", "yellow", "green", "blue"];
+let deck = [];
+let discardPile = [];
+let playerHand = [];
+let aiHand = [];
+let currentColour = null;
+let playerTurn = true;
+
+const playerHandDiv = document.getElementById("player-hand");
+const aiHandDiv = document.getElementById("ai-hand");
+const discardDiv = document.getElementById("discard");
+const deckDiv = document.getElementById("deck");
+const messageDiv = document.getElementById("message");
+
+/* ------------------ DECK ------------------ */
+function createDeck() {
+  deck = [];
+  for (let colour of colours) {
+    for (let i = 0; i <= 9; i++) deck.push({ colour, value: i });
+    ["skip", "reverse", "draw2"].forEach(v => {
+      deck.push({ colour, value: v });
+      deck.push({ colour, value: v });
+    });
+  }
+  for (let i = 0; i < 4; i++) {
+    deck.push({ colour: "black", value: "wild" });
+    deck.push({ colour: "black", value: "wild4" });
+  }
+}
+
+function shuffle() {
+  deck.sort(() => Math.random() - 0.5);
+}
+
+/* ------------------ SETUP ------------------ */
+function dealCards() {
+  for (let i = 0; i < 7; i++) {
+    playerHand.push(deck.pop());
+    aiHand.push(deck.pop());
+  }
+}
+
+function startGame() {
+  createDeck();
+  shuffle();
+  dealCards();
+
+  let first = deck.pop();
+  discardPile.push(first);
+  currentColour = first.colour === "black"
+    ? colours[Math.floor(Math.random() * colours.length)]
+    : first.colour;
+
+  render();
+}
+
+/* ------------------ RENDER ------------------ */
+function render() {
+  playerHandDiv.innerHTML = "";
+  aiHandDiv.innerHTML = "";
+
+  playerHand.forEach((card, index) => {
+    const div = createCard(card);
+    div.onclick = () => playPlayerCard(index);
+    playerHandDiv.appendChild(div);
+  });
+
+  aiHand.forEach(() => {
+    const div = document.createElement("div");
+    div.className = "card back";
+    aiHandDiv.appendChild(div);
+  });
+
+  const top = discardPile[discardPile.length - 1];
+  discardDiv.className = `card ${currentColour}`;
+  discardDiv.textContent = top.value;
+
+  messageDiv.textContent = playerTurn ? "Your turn" : "AI is thinking...";
+}
+
+function createCard(card) {
+  const div = document.createElement("div");
+  div.className = `card ${card.colour}`;
+  div.textContent = card.value;
+  return div;
+}
+
+/* ------------------ RULES ------------------ */
+function canPlay(card) {
+  const top = discardPile[discardPile.length - 1];
+  return (
+    card.colour === currentColour ||
+    card.value === top.value ||
+    card.colour === "black"
+  );
+}
+
+/* ------------------ PLAYER ------------------ */
+function playPlayerCard(index) {
+  if (!playerTurn) return;
+
+  const card = playerHand[index];
+  if (!canPlay(card)) return;
+
+  playerHand.splice(index, 1);
+  playCard(card);
+  playerTurn = false;
+  render();
+
+  setTimeout(aiTurn, 1000);
+}
+
+/* ------------------ AI ------------------ */
+function aiTurn() {
+  let playableIndex = aiHand.findIndex(canPlay);
+
+  if (playableIndex !== -1) {
+    const card = aiHand.splice(playableIndex, 1)[0];
+    playCard(card);
+  } else {
+    drawCards(aiHand, 1);
+  }
+
+  playerTurn = true;
+  render();
+}
+
+/* ------------------ CARD EFFECTS ------------------ */
+function playCard(card) {
+  discardPile.push(card);
+
+  if (card.colour === "black") {
+    currentColour = colours[Math.floor(Math.random() * colours.length)];
+  } else {
+    currentColour = card.colour;
+  }
+
+  if (card.value === "draw2") {
+    drawCards(playerTurn ? aiHand : playerHand, 2);
+  }
+
+  if (card.value === "wild4") {
+    drawCards(playerTurn ? aiHand : playerHand, 4);
+  }
+}
+
+function drawCards(hand, amount) {
+  for (let i = 0; i < amount; i++) {
+    if (deck.length === 0) reshuffle();
+    hand.push(deck.pop());
+  }
+}
+
+function reshuffle() {
+  const top = discardPile.pop();
+  deck = discardPile;
+  discardPile = [top];
+  shuffle();
+}
+
+/* ------------------ DECK CLICK ------------------ */
+deckDiv.onclick = () => {
+  if (!playerTurn) return;
+  drawCards(playerHand, 1);
+  playerTurn = false;
+  render();
+  setTimeout(aiTurn, 1000);
+};
+
+startGame();
