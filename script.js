@@ -113,6 +113,11 @@ function startGameAnimated() {
   pendingDrawActive = false;
   wildCallback = null;
 
+  // hide intro overlay if it exists
+  if (introOverlay) {
+    introOverlay.classList.add("hidden");
+  }
+
   resetOverlay();
   createDeck();
   shuffle();
@@ -508,10 +513,6 @@ restartBtn.addEventListener("click", () => {
   startGameAnimated();
 });
 
-/* ---------- INTRO CLICK ---------- */
+/* ---------- AUTO START ---------- */
 
-introOverlay.addEventListener("click", () => {
-  introOverlay.classList.add("hidden");
-  // first click will also unlock audio autoplay
-  startGameAnimated();
-});
+startGameAnimated();
