@@ -262,3 +262,34 @@ h1 {
     transform: translateY(110vh) rotate(360deg);
   }
 }
+
+/* Intro overlay */
+#intro-overlay {
+  position: fixed;
+  inset: 0;
+  background: #0b5d32;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+.intro-content {
+  text-align: center;
+}
+
+.intro-title {
+  font-size: 72px;
+  font-weight: bold;
+  letter-spacing: 10px;
+}
+
+.intro-subtitle {
+  margin-top: 16px;
+  font-size: 20px;
+  opacity: 0.85;
+}
+
+.hidden {
+  display: none !important;
+}
