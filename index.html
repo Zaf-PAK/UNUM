@@ -2,23 +2,22 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>UNUM – Player vs AI</title>
+  <title>ZUNO – Player vs AI</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<h1>UNUM</h1>
+<h1>ZUNO</h1>
 
 <div id="game">
   <div class="hand">
     <h2>AI</h2>
     <div class="card-count" id="ai-count">Cards: 7</div>
-    <div id="ai-uno" class="uno-badge"></div>
+    <div id="ai-zing" class="uno-badge"></div>
     <div id="ai-hand" class="cards"></div>
   </div>
 
   <div class="centre">
-    <!-- text blank, UNUM comes from CSS -->
     <div id="deck" class="card back"></div>
     <div id="discard" class="card">?</div>
     <div id="current-colour"></div>
@@ -27,7 +26,7 @@
   <div class="hand">
     <h2>You</h2>
     <div class="card-count" id="player-count">Cards: 7</div>
-    <div id="player-uno" class="uno-badge"></div>
+    <div id="player-zing" class="uno-badge"></div>
     <div id="player-hand" class="cards"></div>
   </div>
 </div>
@@ -45,7 +44,7 @@
   </div>
 </div>
 
-<!-- Win overlay with confetti & restart -->
+<!-- Win overlay -->
 <div id="win-overlay" class="overlay">
   <div id="confetti-container"></div>
   <div class="overlay-content">
