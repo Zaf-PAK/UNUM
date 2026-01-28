@@ -69,10 +69,11 @@ function dealCards() {
   }
 }
 
-/* ---------- WIN OVERLAY HELPERS ---------- */
-function hideWinOverlay() {
+/* ---------- OVERLAY RESET ---------- */
+function resetOverlay() {
   winOverlay.style.display = "none";
   confettiContainer.innerHTML = "";
+  messageDiv.textContent = "";
 }
 
 /* ---------- GAME START ---------- */
@@ -80,15 +81,17 @@ function startGame() {
   gameOver = false;
   pendingDraw = 0;
   pendingDrawActive = false;
-  hideWinOverlay();
+  wildCallback = null;
 
+  resetOverlay();
   createDeck();
   shuffle();
   dealCards();
 
   // Flip first card
   let first = deck.pop();
-  discardPile.push(first);
+  discardPile = [first];
+
   currentColour = first.colour === "black"
     ? colours[Math.floor(Math.random() * colours.length)]
     : first.colour;
