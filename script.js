@@ -28,6 +28,10 @@ const restartBtn      = document.getElementById("restart-btn");
 const confettiContainer = document.getElementById("confetti-container");
 const trophyEl        = document.querySelector(".trophy");
 
+// NEW: card count elements
+const playerCountEl   = document.getElementById("player-count");
+const aiCountEl       = document.getElementById("ai-count");
+
 /* ------------------ DECK ------------------ */
 function createDeck() {
   deck = [];
@@ -144,6 +148,7 @@ function render() {
   discardDiv.className = discardClasses;
   discardDiv.textContent = displayValue(top.value);
 
+  // Current colour + pending draw info
   currentColourEl.textContent = `Current colour: ${currentColour.toUpperCase()}` +
     (pendingDrawActive ? `  |  Pending draw: ${pendingDraw}` : "");
 
@@ -164,6 +169,11 @@ function render() {
     aiUnoEl.classList.remove("active");
   }
 
+  // NEW: card counts
+  playerCountEl.textContent = `Cards: ${playerHand.length}`;
+  aiCountEl.textContent = `Cards: ${aiHand.length}`;
+
+  // Turn / status message
   if (!gameOver) {
     if (pendingDrawActive && currentPlayer === "player") {
       messageDiv.textContent = `Your turn – play +2 / +4 or draw ${pendingDraw}`;
