@@ -13,6 +13,12 @@ let gameOver = false;
 let pendingDraw = 0;
 let pendingDrawActive = false;
 
+// are we currently dealing the intro cards?
+let dealing = false;
+
+// audio
+let audioCtx = null;
+
 // DOM elements
 const playerHandDiv   = document.getElementById("player-hand");
 const aiHandDiv       = document.getElementById("ai-hand");
@@ -33,6 +39,33 @@ const winMessageEl    = document.getElementById("win-message");
 const restartBtn      = document.getElementById("restart-btn");
 const confettiContainer = document.getElementById("confetti-container");
 const trophyEl        = document.querySelector(".trophy");
+
+const introOverlay    = document.getElementById("intro-overlay");
+
+/* ---------- AUDIO HELPERS ---------- */
+
+function getAudioCtx() {
+  if (!audioCtx) {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (AC) audioCtx = new AC();
+  }
+  return audioCtx;
+}
+
+function playDealSound() {
+  const ctx = getAudioCtx();
+  if (!ctx) return;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = "square";
+  osc.frequency.value = 650 + Math.random() * 150;
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  gain.gain.value = 0.2;
+  osc.start();
+  gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.08);
+  osc.stop(ctx.currentTime + 0.1);
+}
 
 /* ---------- DECK SETUP ---------- */
 function createDeck() {
@@ -59,14 +92,10 @@ function shuffle() {
   deck.sort(() => Math.random() - 0.5);
 }
 
-function dealCards() {
+function dealEmpty() {
   playerHand = [];
   aiHand = [];
   discardPile = [];
-  for (let i = 0; i < 7; i++) {
-    playerHand.push(deck.pop());
-    aiHand.push(deck.pop());
-  }
 }
 
 /* ---------- OVERLAY RESET ---------- */
@@ -76,8 +105,9 @@ function resetOverlay() {
   messageDiv.textContent = "";
 }
 
-/* ---------- GAME START ---------- */
-function startGame() {
+/* ---------- GAME START WITH ANIMATION ---------- */
+
+function startGameAnimated() {
   gameOver = false;
   pendingDraw = 0;
   pendingDrawActive = false;
@@ -86,18 +116,48 @@ function startGame() {
   resetOverlay();
   createDeck();
   shuffle();
-  dealCards();
 
-  // Flip first card
-  let first = deck.pop();
-  discardPile = [first];
+  // pre-deal into temp arrays
+  const tempPlayer = [];
+  const tempAI = [];
+  for (let i = 0; i < 7; i++) {
+    tempAI.push(deck.pop());
+    tempPlayer.push(deck.pop());
+  }
+  const first = deck.pop(); // first discard card
 
-  currentColour = first.colour === "black"
-    ? colours[Math.floor(Math.random() * colours.length)]
-    : first.colour;
-
+  dealEmpty();
+  currentColour = null;
   currentPlayer = "player";
+  dealing = true;
   render();
+
+  let step = 0; // 0..13 -> 14 cards total (7 each)
+
+  function dealNext() {
+    if (step < 14) {
+      const idx = Math.floor(step / 2);
+      if (step % 2 === 0) {
+        aiHand.push(tempAI[idx]);
+      } else {
+        playerHand.push(tempPlayer[idx]);
+      }
+      playDealSound();
+      render();
+      step++;
+      setTimeout(dealNext, 150);
+    } else {
+      // after dealing, set discard and colour
+      discardPile = [first];
+      currentColour = first.colour === "black"
+        ? colours[Math.floor(Math.random() * colours.length)]
+        : first.colour;
+      dealing = false;
+      render();
+    }
+  }
+
+  dealNext();
 }
 
 /* ---------- RENDER ---------- */
@@ -138,21 +198,30 @@ function render() {
   });
 
   // Discard pile
-  const top = discardPile[discardPile.length - 1];
-  let discardClasses = "card";
-  if (top.colour !== "black") {
-    discardClasses += ` ${top.colour}`;
+  if (discardPile.length > 0) {
+    const top = discardPile[discardPile.length - 1];
+    let discardClasses = "card";
+    if (top.colour !== "black") {
+      discardClasses += ` ${top.colour}`;
+    }
+    if (top.value === "wild" || top.value === "wild4") {
+      discardClasses += " wild4-card";
+    }
+    discardDiv.className = discardClasses;
+    discardDiv.textContent = displayValue(top.value);
+  } else {
+    discardDiv.className = "card";
+    discardDiv.textContent = "?";
   }
-  if (top.value === "wild" || top.value === "wild4") {
-    discardClasses += " wild4-card";
-  }
-  discardDiv.className = discardClasses;
-  discardDiv.textContent = displayValue(top.value);
 
   // Status text & counts
-  currentColourEl.textContent =
-    `Current colour: ${currentColour.toUpperCase()}` +
-    (pendingDrawActive ? ` | Pending draw: ${pendingDraw}` : "");
+  if (currentColour) {
+    currentColourEl.textContent =
+      `Current colour: ${currentColour.toUpperCase()}` +
+      (pendingDrawActive ? ` | Pending draw: ${pendingDraw}` : "");
+  } else {
+    currentColourEl.textContent = "";
+  }
 
   playerCountEl.textContent = `Cards: ${playerHand.length}`;
   aiCountEl.textContent     = `Cards: ${aiHand.length}`;
@@ -167,7 +236,7 @@ function render() {
   playerZingEl.classList.toggle("active", pZing);
   aiZingEl.classList.toggle("active", aZing);
 
-  if (!gameOver) {
+  if (!gameOver && !dealing) {
     messageDiv.textContent =
       currentPlayer === "player" ? "Your turn" : "AI is thinking...";
   }
@@ -176,6 +245,7 @@ function render() {
 /* ---------- RULES ---------- */
 
 function canPlay(card) {
+  if (discardPile.length === 0 || !currentColour) return false;
   const top = discardPile[discardPile.length - 1];
 
   // While under draw penalty, we have two modes depending on the top card:
@@ -226,7 +296,7 @@ function endOfTurn(card) {
   }
   checkForWinner();
   render();
-  if (!gameOver && currentPlayer === "ai") {
+  if (!gameOver && currentPlayer === "ai" && !dealing) {
     setTimeout(aiTurn, 800);
   }
 }
@@ -234,7 +304,7 @@ function endOfTurn(card) {
 /* ---------- PLAYER TURN ---------- */
 
 function playPlayerCard(index) {
-  if (gameOver || currentPlayer !== "player") return;
+  if (gameOver || currentPlayer !== "player" || dealing) return;
 
   const card = playerHand[index];
 
@@ -262,7 +332,7 @@ function playPlayerCard(index) {
 /* ---------- AI TURN ---------- */
 
 function aiTurn() {
-  if (gameOver || currentPlayer !== "ai") return;
+  if (gameOver || currentPlayer !== "ai" || dealing) return;
 
   // Under draw penalty: AI tries to stack using same rules as player
   if (pendingDrawActive) {
@@ -367,7 +437,7 @@ function chooseBestColour(hand) {
 /* ---------- DECK CLICK (PLAYER DRAW) ---------- */
 
 deckDiv.onclick = () => {
-  if (gameOver || currentPlayer !== "player") return;
+  if (gameOver || currentPlayer !== "player" || dealing) return;
 
   if (pendingDrawActive) {
     // Under penalty: draw everything, then AI turn
@@ -388,9 +458,9 @@ deckDiv.onclick = () => {
 /* ---------- WIN LOGIC ---------- */
 
 function checkForWinner() {
-  if (playerHand.length === 0) {
+  if (playerHand.length === 0 && !dealing) {
     endGame("player");
-  } else if (aiHand.length === 0) {
+  } else if (aiHand.length === 0 && !dealing) {
     endGame("ai");
   }
 }
@@ -435,9 +505,13 @@ function launchConfetti() {
 /* ---------- RESTART ---------- */
 
 restartBtn.addEventListener("click", () => {
-  startGame();
+  startGameAnimated();
 });
 
-/* ---------- START ---------- */
+/* ---------- INTRO CLICK ---------- */
 
-startGame();
+introOverlay.addEventListener("click", () => {
+  introOverlay.classList.add("hidden");
+  // first click will also unlock audio autoplay
+  startGameAnimated();
+});
