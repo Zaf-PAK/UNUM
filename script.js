@@ -38,14 +38,17 @@ const trophyEl        = document.querySelector(".trophy");
 function createDeck() {
   deck = [];
   for (let colour of colours) {
+    // number cards 0–9
     for (let i = 0; i <= 9; i++) {
       deck.push({ colour, value: i });
     }
+    // action cards (x2 each): skip, reverse, draw2
     ["skip", "reverse", "draw2"].forEach(v => {
       deck.push({ colour, value: v });
       deck.push({ colour, value: v });
     });
   }
+  // wilds and +4s
   for (let i = 0; i < 4; i++) {
     deck.push({ colour: "black", value: "wild" });
     deck.push({ colour: "black", value: "wild4" });
@@ -66,10 +69,19 @@ function dealCards() {
   }
 }
 
+/* ---------- WIN OVERLAY HELPERS ---------- */
+function hideWinOverlay() {
+  winOverlay.style.display = "none";
+  confettiContainer.innerHTML = "";
+}
+
+/* ---------- GAME START ---------- */
 function startGame() {
   gameOver = false;
   pendingDraw = 0;
   pendingDrawActive = false;
+  hideWinOverlay();
+
   createDeck();
   shuffle();
   dealCards();
@@ -163,16 +175,25 @@ function render() {
 function canPlay(card) {
   const top = discardPile[discardPile.length - 1];
 
-  // While under draw penalty, stacking is restricted:
-  // - You can always play a Wild +4 (any colour)
-  // - You can only play a +2 of the CURRENT colour
+  // While under draw penalty, we have two modes depending on the top card:
+  // 1) Stack started by +2 (top.value !== "wild4"):
+  //    - ANY +2 (any colour)
+  //    - ANY +4
+  // 2) Top card is +4 (wild4):
+  //    - ANY +4
+  //    - +2 ONLY if it matches the CURRENT colour of the +4
   if (pendingDrawActive) {
-    if (card.value === "wild4") return true;
-    if (card.value === "draw2" && card.colour === currentColour) return true;
-    return false;
+    if (top.value === "wild4") {
+      if (card.value === "wild4") return true;
+      if (card.value === "draw2" && card.colour === currentColour) return true;
+      return false;
+    } else {
+      // stack started with +2 (or still on +2)
+      return card.value === "draw2" || card.value === "wild4";
+    }
   }
 
-  // Normal rule
+  // Normal rule (no pending draw)
   return (
     card.colour === currentColour ||
     card.value === top.value ||
@@ -214,8 +235,8 @@ function playPlayerCard(index) {
 
   const card = playerHand[index];
 
-  // Under draw penalty: only +2 / +4 can be *considered*,
-  // and colour/wild rules are enforced in canPlay()
+  // While under draw penalty, only +2 or +4 can be *considered*;
+  // colour and wild rules are then enforced in canPlay().
   if (pendingDrawActive && card.value !== "draw2" && card.value !== "wild4") {
     return;
   }
@@ -240,9 +261,9 @@ function playPlayerCard(index) {
 function aiTurn() {
   if (gameOver || currentPlayer !== "ai") return;
 
-  // Under draw penalty: AI tries to stack respecting colour
+  // Under draw penalty: AI tries to stack using same rules as player
   if (pendingDrawActive) {
-    const idx = aiHand.findIndex(c => canPlay(c)); // uses same rule as player
+    const idx = aiHand.findIndex(c => canPlay(c));
     if (idx !== -1) {
       const card = aiHand.splice(idx, 1)[0];
       const chosen =
