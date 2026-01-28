@@ -29,6 +29,7 @@ h1 {
   justify-content: center;
 }
 
+/* Base card */
 .card {
   position: relative;
   width: 80px;
@@ -57,10 +58,11 @@ h1 {
   opacity: 0.7;
 }
 
-/* Card back (deck + AI cards) */
+/* Card back (deck + AI) */
 .card.back {
   background: radial-gradient(circle at 30% 20%, #ffffff 0%, #444 40%, #000 80%);
   color: #fff;
+  font-size: 20px;
 }
 
 .card.back::after {
@@ -72,13 +74,25 @@ h1 {
   color: #fff;
 }
 
-/* Colours */
-.red    { background: radial-gradient(circle at 30% 20%, #ffb3b3, #e74c3c); }
-.yellow { background: radial-gradient(circle at 30% 20%, #fff2a3, #f1c40f); color:#000; }
-.green  { background: radial-gradient(circle at 30% 20%, #a8f5c0, #2ecc71); }
-.blue   { background: radial-gradient(circle at 30% 20%, #a8d6ff, #3498db); }
+/* Normal colour cards */
+.red {
+  background: radial-gradient(circle at 30% 20%, #ffb3b3, #e74c3c);
+}
 
-/* Wild & +4 */
+.yellow {
+  background: radial-gradient(circle at 30% 20%, #fff2a3, #f1c40f);
+  color: #000;
+}
+
+.green {
+  background: radial-gradient(circle at 30% 20%, #a8f5c0, #2ecc71);
+}
+
+.blue {
+  background: radial-gradient(circle at 30% 20%, #a8d6ff, #3498db);
+}
+
+/* Wild / +4 quartered colours */
 .wild4-card {
   background: conic-gradient(
     #e74c3c 0 25%,
@@ -89,7 +103,7 @@ h1 {
   color: #fff;
 }
 
-/* Centre */
+/* Centre area */
 .centre {
   display: flex;
   flex-direction: column;
@@ -98,17 +112,18 @@ h1 {
 }
 
 #current-colour {
+  margin-top: 4px;
   font-size: 14px;
   font-weight: bold;
 }
 
-/* Text */
 #message {
   margin-top: 18px;
   font-size: 18px;
   font-weight: bold;
 }
 
+/* Card counts */
 .card-count {
   font-size: 14px;
   margin-bottom: 4px;
@@ -121,46 +136,62 @@ h1 {
   margin-bottom: 4px;
   font-size: 14px;
   font-weight: bold;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .uno-badge.active {
   padding: 2px 8px;
   background: #e74c3c;
   border-radius: 999px;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.4);
 }
 
-/* Colour picker */
+/* Wild colour picker */
 #colour-picker {
   position: fixed;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
   background: rgba(0,0,0,0.9);
-  padding: 20px;
+  padding: 20px 24px;
   border-radius: 14px;
   display: none;
+  flex-direction: column;
+  gap: 10px;
   z-index: 20;
+  box-shadow: 0 8px 16px rgba(0,0,0,0.6);
+}
+
+#colour-picker p {
+  margin: 0 0 8px;
+  font-size: 18px;
 }
 
 .picker-buttons {
   display: flex;
   gap: 10px;
+  justify-content: center;
 }
 
 .colour-btn {
+  border: none;
   padding: 10px 16px;
   border-radius: 8px;
-  border: none;
   font-weight: bold;
   cursor: pointer;
+  font-size: 14px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.4);
 }
 
-.colour-btn.red    { background:#e74c3c; color:#fff; }
-.colour-btn.yellow { background:#f1c40f; color:#000; }
-.colour-btn.green  { background:#2ecc71; color:#fff; }
-.colour-btn.blue   { background:#3498db; color:#fff; }
+.colour-btn.red    { background: #e74c3c; color: #fff; }
+.colour-btn.yellow { background: #f1c40f; color: #000; }
+.colour-btn.green  { background: #2ecc71; color: #fff; }
+.colour-btn.blue   { background: #3498db; color: #fff; }
 
-/* Win overlay */
+/* Win overlay & confetti */
 .overlay {
   position: fixed;
   inset: 0;
@@ -168,26 +199,66 @@ h1 {
   display: none;
   align-items: center;
   justify-content: center;
+  z-index: 30;
 }
 
 .overlay-content {
+  position: relative;
   background: #1f2933;
-  padding: 24px;
+  padding: 24px 32px;
   border-radius: 16px;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.7);
+  z-index: 31;
+  text-align: center;
+}
+
+#win-message {
+  font-size: 24px;
+  margin-bottom: 10px;
 }
 
 .trophy {
   font-size: 60px;
+  margin-bottom: 16px;
+}
+
+#restart-btn {
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  background: #f1c40f;
+  color: #000;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+}
+
+/* Confetti */
+#confetti-container {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 30;
 }
 
 .confetti {
   position: absolute;
+  top: -10px;
   width: 8px;
   height: 14px;
-  animation: fall 3s linear forwards;
+  opacity: 0.9;
+  animation-name: confetti-fall;
+  animation-timing-function: linear;
+  animation-iteration-count: 1;
 }
 
-@keyframes fall {
-  from { transform: translateY(0); }
-  to   { transform: translateY(110vh); }
+@keyframes confetti-fall {
+  0% {
+    transform: translateY(0) rotate(0deg);
+  }
+  100% {
+    transform: translateY(110vh) rotate(360deg);
+  }
 }
