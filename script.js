@@ -163,10 +163,16 @@ function render() {
 function canPlay(card) {
   const top = discardPile[discardPile.length - 1];
 
+  // While under draw penalty, stacking is restricted:
+  // - You can always play a Wild +4 (any colour)
+  // - You can only play a +2 of the CURRENT colour
   if (pendingDrawActive) {
-    return card.value === "draw2" || card.value === "wild4";
+    if (card.value === "wild4") return true;
+    if (card.value === "draw2" && card.colour === currentColour) return true;
+    return false;
   }
 
+  // Normal rule
   return (
     card.colour === currentColour ||
     card.value === top.value ||
@@ -208,6 +214,8 @@ function playPlayerCard(index) {
 
   const card = playerHand[index];
 
+  // Under draw penalty: only +2 / +4 can be *considered*,
+  // and colour/wild rules are enforced in canPlay()
   if (pendingDrawActive && card.value !== "draw2" && card.value !== "wild4") {
     return;
   }
@@ -232,11 +240,9 @@ function playPlayerCard(index) {
 function aiTurn() {
   if (gameOver || currentPlayer !== "ai") return;
 
-  // Under draw penalty: AI tries to stack
+  // Under draw penalty: AI tries to stack respecting colour
   if (pendingDrawActive) {
-    const idx = aiHand.findIndex(
-      c => c.value === "draw2" || c.value === "wild4"
-    );
+    const idx = aiHand.findIndex(c => canPlay(c)); // uses same rule as player
     if (idx !== -1) {
       const card = aiHand.splice(idx, 1)[0];
       const chosen =
@@ -246,7 +252,7 @@ function aiTurn() {
       applyCardPlay(card, chosen);
       endOfTurn(card);
     } else {
-      // No stack: AI must draw all, then your turn
+      // No valid stack: AI must draw all, then your turn
       drawCards(aiHand, pendingDraw);
       pendingDraw = 0;
       pendingDrawActive = false;
@@ -340,10 +346,12 @@ deckDiv.onclick = () => {
   if (gameOver || currentPlayer !== "player") return;
 
   if (pendingDrawActive) {
+    // Under penalty: draw everything, then AI turn
     drawCards(playerHand, pendingDraw);
     pendingDraw = 0;
     pendingDrawActive = false;
   } else {
+    // Normal: draw 1, then AI turn
     drawCards(playerHand, 1);
   }
 
